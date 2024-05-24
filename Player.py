@@ -1,8 +1,7 @@
-#this class is objectively stupid
-#but it'll do for now
+# this class is objectively stupid
+# but it'll do for now
 class Player:
 
-	def __init__(self):
+    def __init__(self):
 
-		return
-
+        return
