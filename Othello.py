@@ -22,7 +22,7 @@ SQUARE_BUFFER = 3
 BACKGROUND_COLOR = (36, 163, 57)
 
 # measured in ms
-MAX_MOVE_TIME = 5000
+MAX_MOVE_TIME = float("inf")
 
 
 def main():
