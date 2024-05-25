@@ -145,46 +145,46 @@ class OthelloState:
             x += xInc
             y += yInc
 
-    def __flipPieces(self, x, y, verbose=True):
+    def __flipPieces(self, x, y, verbose=False):
 
         # horizontal left
         if (self.__isSandwich(self.nextMove, x, y, -1, 0)):
-            print("1")
+            # print("1")
             self.__flipSandwich(self.nextMove, x, y, -1, 0)
 
         # horizontal right
         if (self.__isSandwich(self.nextMove, x, y, 1, 0)):
-            print("2")
+            # print("2")
             self.__flipSandwich(self.nextMove, x, y, 1, 0)
 
         # vertical up
         if (self.__isSandwich(self.nextMove, x, y, 0, 1)):
-            print("3")
+            # print("3")
             self.__flipSandwich(self.nextMove, x, y, 0, 1)
 
         # vertical down
         if (self.__isSandwich(self.nextMove, x, y, 0, -1)):
-            print("4")
+            # print("4")
             self.__flipSandwich(self.nextMove, x, y, 0, -1)
 
         # diagonal NW
         if (self.__isSandwich(self.nextMove, x, y, -1, -1)):
-            print("5")
+            # print("5")
             self.__flipSandwich(self.nextMove, x, y, -1, -1)
 
         # diagonal SW
         if (self.__isSandwich(self.nextMove, x, y, -1, 1)):
-            print("6")
+            # print("6")
             self.__flipSandwich(self.nextMove, x, y, -1, 1)
 
         # diagonal NE
         if (self.__isSandwich(self.nextMove, x, y, 1, -1)):
-            print("7")
+            # print("7")
             self.__flipSandwich(self.nextMove, x, y, 1, -1)
 
         # diagonal SE
         if (self.__isSandwich(self.nextMove, x, y, 1, 1)):
-            print("7")
+            # print("7")
             self.__flipSandwich(self.nextMove, x, y, 1, 1)
 
     def __advanceMove(self):

@@ -14,9 +14,9 @@ from SpareAgent import SpareAgent
 from copy import deepcopy
 
 
-NUM_COLS = 8
 NUM_ROWS = 8
-SQUARE_WIDTH = 100
+NUM_COLS = 8
+SQUARE_WIDTH = 80
 SQUARE_BUFFER = 3
 
 BACKGROUND_COLOR = (36, 163, 57)
@@ -110,7 +110,7 @@ def main():
                             clickPos = pygame.mouse.get_pos()
                             col = getClickCol(clickPos)
                             row = getClickRow(clickPos)
-                            if (state.isValidMove(col, row, state.nextMove, verbose=True)):
+                            if (state.isValidMove(col, row, state.nextMove, verbose=False)):
                                 log.addMove((col, row))
                                 state.placePiece(col, row)
                                 playerHasMoved = True

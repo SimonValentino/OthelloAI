@@ -1,21 +1,21 @@
-from OthelloState import Piece
+from OthelloState import Piece, OthelloState
 
-NUM_ROWS = 8
-NUM_COLS = 8
+INF = float('inf')
+MAX_DEPTH = 5
 
 DISK_SCORE = 10
 CHAIN_BONUS = 15
-STRONG_CHAIN_BONUS = 30
+STRONG_CHAIN_BONUS = 100
 
 POINT_MATRIX = [
-    [100, -10, 10, 10, 10, 10, -10, 100],
+    [500, -10, 10, 10, 10, 10, -10, 500],
     [-10, -25, 1, 1, 1, 1, -25, -10],
     [10, 1, 5, 5, 5, 5, 1, 10],
     [10, 1, 5, 0, 0, 5, 1, 10],
     [10, 1, 5, 0, 0, 5, 1, 10],
     [10, 1, 5, 5, 5, 5, 1, 10],
     [-10, -25, 1, 1, 1, 1, -25, -10],
-    [100, -10, 10, 10, 10, 10, -10, 100],
+    [500, -10, 10, 10, 10, 10, -10, 500],
 ]
 
 CORNERS = [
@@ -34,16 +34,15 @@ class Agent:
     def __init__(self):
         return
 
-    def heuristic(self, gameState):
-        board = gameState.board
-        color = gameState.nextMove
+    def heuristic(self, state):
+        board = state.board
+        color = state.nextMove
         opp_color = Piece.oppositePiece(color)
 
         score = 0
 
-        # Point matrix and num disks
-        for i in range(NUM_ROWS):
-            for j in range(NUM_COLS):
+        for i in range(state.numRows):
+            for j in range(state.numCols):
                 if (i, j) not in CORNER_ADJACENCIES:
                     piece = board[i][j]
 
@@ -54,10 +53,11 @@ class Agent:
                         score -= POINT_MATRIX[i][j]
                         score -= DISK_SCORE
 
-        edges = [(0, col) for col in range(NUM_COLS - 1, -1, -1)] + \
-                [(row, 0) for row in range(1, NUM_ROWS)] + \
-                [(NUM_ROWS - 1, col) for col in range(1, NUM_COLS)] + \
-                [(row, NUM_COLS - 1) for row in range(NUM_ROWS - 2, 0, -1)]
+        edges = [(0, col) for col in range(state.numCols - 1, -1, -1)] + \
+                [(row, 0) for row in range(1, state.numRows)] + \
+                [(state.numRows - 1, col) for col in range(1, state.numCols)] + \
+                [(row, state.numCols - 1)
+                 for row in range(state.numRows - 2, 0, -1)]
         color_chains = []
         opp_color_chains = []
         chain = []
@@ -88,5 +88,57 @@ class Agent:
 
         return score
 
-    def getNextMove(self, gameState):
-        return (0, 0)
+    def getNextMove(self, state):
+        best_score = -INF
+        best_move = None
+
+        for move in self.generate_possible_moves(state):
+            new_state = self.apply_move(state, move)
+            score = self.minimax(new_state, MAX_DEPTH - 1, False)
+            if score > best_score:
+                best_score = score
+                best_move = move
+
+        print(f"Best Score: {best_score}")
+        print(f"Best Move: {best_move}")
+
+        return best_move
+
+    def minimax(self, state, depth, is_maximizing):
+        if depth == 0 or not state.existsNextMove():
+            return self.heuristic(state)
+
+        if is_maximizing:
+            max_eval = -INF
+            for move in self.generate_possible_moves(state):
+                new_state = self.apply_move(state, move)
+                eval = self.minimax(new_state, depth - 1, False)
+                max_eval = max(max_eval, eval)
+
+            return max_eval
+        else:
+            min_eval = INF
+            for move in self.generate_possible_moves(state):
+                new_state = self.apply_move(state, move)
+                eval = self.minimax(new_state, depth - 1, True)
+                min_eval = min(min_eval, eval)
+
+            return min_eval
+
+    def generate_possible_moves(self, state):
+        moves = []
+        for i in range(state.numRows):
+            for j in range(state.numCols):
+                if state.isValidMove(i, j, state.nextMove):
+                    moves.append((i, j))
+
+        return moves
+
+    def apply_move(self, state, move):
+        new_state = OthelloState()
+        new_state.board = [row[:] for row in state.board]
+        new_state.nextMove = state.nextMove
+        new_state.placePiece(move[0], move[1])
+        new_state._OthelloState__advanceMove()
+
+        return new_state
