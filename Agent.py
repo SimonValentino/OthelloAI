@@ -3,21 +3,27 @@ import random
 import time
 
 INF = float('inf')
-MAX_DEPTH = 10
+DEPTH = 6
 
-COUNT_WEIGHT = 10
-MOBILITY_WEIGHT = 30
-CHAIN_BONUS = 300
-STRONG_CHAIN_BONUS = 3000
+COUNT_WEIGHT = 20
+CHAIN_WEIGHT = 10
+STRONG_CHAIN_WEIGHT = 50
+MATRIX_WEIGHT = 100
+
 POINT_MATRIX = [
-    [10000, -700,  100,  60,  60,  100, -700, 10000],
-    [-700, -1000,  -45, -50, -50,  -45, -1000, -700],
-    [100,  -45,   3,    1,   1,    3,   -45,  100],
-    [60,   -50,   1,    2,   2,    1,   -50,   60],
-    [60,   -50,   1,    2,   2,    1,   -50,   60],
-    [100,  -45,   3,    1,   1,    3,   -45,  100],
-    [-700, -1000,  -45, -50, -50,  -45, -1000, -700],
-    [10000, -700,  100,  60,  60,  100, -700, 10000]
+    [4, -3, 2, 2, 2, 2, -3, 4],
+    [-3, -4, -1, -1, -1, -1, -4, -3],
+    [2, -1, 1, 0, 0, 1, -1, 2],
+    [2, -1, 0, 1, 1, 0, -1, 2],
+    [2, -1, 0, 1, 1, 0, -1, 2],
+    [2, -1, 1, 1, 1, 1, -1, 2],
+    [-3, -4, -1, -1, -1, -1, -4, -3],
+    [4, -3, 2, 2, 2, 2, -3, 4]
+]
+
+ADJACENT_CORNERS = [
+    (0, 1), (1, 0), (1, 1), (0, 6), (1, 6), (1, 7),
+    (6, 0), (6, 1), (7, 1), (6, 6), (6, 7), (7, 6)
 ]
 
 
@@ -26,133 +32,163 @@ class Agent:
         return
 
     def getNextMove(self, state):
-        score, move = self.__minimax(state, MAX_DEPTH, -INF, INF, True)
-        print(score)
-        return move
+        # ALPHA BETA PRUNING
+        # best_move, best_value = self.__minimax(state, DEPTH, -INF, INF, True)
+        # return best_move
+    
+        # JUST HEURISTIC
+        best = -INF
+        best_move = None
+        moves = self.__generate_possible_moves(state)
+        for move in moves:
+            new_state = self.__apply_move(state, move)
+            val = self.__heuristic(new_state)
+            if val > best:
+                best = val
+                best_move = move
+
+        return best_move
 
     def __minimax(self, state, depth, alpha, beta, is_maximizing):
         if depth == 0 or not state.existsNextMove():
-            return self.__heuristic(state), None
+            return None, self.__heuristic(state)
 
+        best_move = None
+
+        moves = self.__generate_possible_moves(state)
         if is_maximizing:
-            val = -INF
-            moves = self.__generate_possible_moves(state)
-
+            max_eval = -INF
             for move in moves:
                 new_state = self.__apply_move(state, move)
-
-                temp = self.__minimax(
-                    new_state, depth - 1, alpha, beta, False)[0]
-                if temp > val:
-                    val = temp
+                _, eval = self.__minimax(
+                    new_state, depth - 1, alpha, beta, False)
+                if eval > max_eval:
+                    max_eval = eval
                     best_move = move
-
-                if val >= beta:
+                alpha = max(alpha, eval)
+                if beta <= alpha:
                     break
-
-                alpha = max(alpha, val)
-
+            return best_move, max_eval
         else:
-            val = INF
-            moves = self.__generate_possible_moves(state)
-
+            min_eval = INF
             for move in moves:
                 new_state = self.__apply_move(state, move)
-
-                temp = self.__minimax(
-                    new_state, depth - 1, alpha, beta, True)[0]
-
-                if temp < val:
-                    val = temp
+                _, eval = self.__minimax(
+                    new_state, depth - 1, alpha, beta, True)
+                if eval < min_eval:
+                    min_eval = eval
                     best_move = move
-
-                if val <= alpha:
+                beta = min(beta, eval)
+                if beta <= alpha:
                     break
+            return best_move, min_eval
 
-                beta = min(beta, val)
+    def __heuristic(self, state, verbose=False):
+        my_color = state.nextMove
+        opp_color = Piece.oppositePiece(my_color)
+        board = state.board
 
-        return val, best_move
-
-    def __heuristic(self, state):
-        color = state.nextMove
-
-        my_points = 0
-        opp_points = 0
-
+        # MATRIX and COUNT
+        my_matrix = 0
+        opp_matrix = 0
         my_count = 0
         opp_count = 0
 
-        for i in range(state.numRows):
-            for j in range(state.numCols):
-                piece = state.board[i][j]
-                if piece == color:
-                    my_points += POINT_MATRIX[i][j]
+        for i in range(len(POINT_MATRIX)):
+            for j in range(len(POINT_MATRIX[0])):
+                if board[i][j] == my_color:
+                    my_matrix += POINT_MATRIX[i][j]
                     my_count += 1
-                elif piece == Piece.oppositePiece(color):
-                    opp_points += POINT_MATRIX[i][j]
+                elif board[i][j] == opp_color:
+                    opp_matrix += POINT_MATRIX[i][j]
                     opp_count += 1
 
+        matrix = my_matrix - opp_matrix
+        count = my_count - opp_count
+
+        # Adjusting the values of adjacent corner squares
+        corners = [(0, 0), (0, state.numCols - 1), (state.numRows -
+                                                    1, 0), (state.numRows - 1, state.numCols - 1)]
+        for x, y in corners:
+            if board[x][y] == Piece.EMPTY:
+                for dx, dy in [(0, 1), (1, 0), (1, 1), (0, -1), (1, -1), (-1, 0), (-1, 1), (-1, -1)]:
+                    adj_x, adj_y = x + dx, y + dy
+                    if 0 <= adj_x < state.numRows and 0 <= adj_y < state.numCols:
+                        if board[adj_x][adj_y] == my_color:
+                            matrix -= POINT_MATRIX[adj_x][adj_y]
+                        elif board[adj_x][adj_y] == opp_color:
+                            matrix += POINT_MATRIX[adj_x][adj_y]
+
+        # CHAIN and STRONG CHAIN
         edges = [(0, col) for col in range(state.numCols)] + \
                 [(state.numRows - 1, col) for col in range(state.numCols)] + \
                 [(row, 0) for row in range(1, state.numRows - 1)] + \
                 [(row, state.numCols - 1)
                  for row in range(1, state.numRows - 1)]
 
-        my_chain_score = 0
-        opp_chain_score = 0
+        my_chain = 0
+        opp_chain = 0
+        my_strong_chain = 0
+        opp_strong_chain = 0
 
         my_chains = []
         opp_chains = []
         chain = []
-        prev_piece = Piece.EMPTY
+        prev = Piece.EMPTY
 
         for edge in edges:
             x, y = edge
-            curr_piece = state.board[x][y]
-            if curr_piece != prev_piece:
-                if prev_piece == color:
+            curr = state.board[x][y]
+            if curr != prev:
+                if prev == my_color:
                     my_chains.append(chain)
-                elif prev_piece == Piece.oppositePiece(color):
+                elif prev == opp_color:
                     opp_chains.append(chain)
 
                 chain = []
 
             chain.append(edge)
-            prev_piece = curr_piece
+            prev = curr
 
-        if prev_piece == color:
+        if prev == my_color:
             my_chains.append(chain)
-        elif prev_piece == Piece.oppositePiece(color):
+        elif prev == opp_color:
             opp_chains.append(chain)
-
-        corners = [(0, 0),
-                   (0, state.numCols - 1),
-                   (state.numRows - 1, 0),
-                   (state.numRows - 1,
-                    state.numCols - 1)]
 
         for chain in my_chains:
             has_corner = any(corner in chain for corner in corners)
             if has_corner:
-                my_chain_score += (len(chain) - 1) * STRONG_CHAIN_BONUS
+                my_strong_chain += len(chain) - 1
             else:
-                my_chain_score += (len(chain) - 1) * CHAIN_BONUS
+                my_chain += len(chain) - 1
 
         for chain in opp_chains:
             has_corner = any(corner in chain for corner in corners)
             if has_corner:
-                opp_chain_score += (len(chain) - 1) * STRONG_CHAIN_BONUS
+                opp_strong_chain += len(chain) - 1
             else:
-                opp_chain_score += (len(chain) - 1) * CHAIN_BONUS
+                opp_chain += len(chain) - 1
 
-        my_moves = len(self.__generate_possible_moves(state))
+        chain = my_chain - opp_chain
+        strong_chain = my_strong_chain - opp_strong_chain
 
-        point_score = my_points - opp_points
-        count_score = my_count - opp_count
-        chain_score = my_chain_score - opp_chain_score
-        mobility_score = MOBILITY_WEIGHT * my_moves
+        score = matrix * MATRIX_WEIGHT + \
+            count * COUNT_WEIGHT + \
+            chain * CHAIN_WEIGHT + \
+            strong_chain * STRONG_CHAIN_WEIGHT
 
-        return count_score + mobility_score + point_score + chain_score
+        if verbose:
+            print(my_color, "COUNT:", my_count)
+            print(opp_color, "COUNT:", opp_count)
+            print(my_color, "CHAIN:", my_chain)
+            print(opp_color, "CHAIN:", opp_chain)
+            print(my_color, "STRONG CHAIN:", my_strong_chain)
+            print(opp_color, "STRONG CHAIN:", opp_strong_chain)
+            print(my_color, "MATRIX:", my_matrix)
+            print(opp_color, "MATRIX:", opp_matrix)
+            print("SCORE:", score)
+
+        return score
 
     def __generate_possible_moves(self, state):
         moves = []
