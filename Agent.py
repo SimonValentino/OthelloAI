@@ -3,23 +3,25 @@ import random
 import time
 
 INF = float('inf')
-DEPTH = 6
+DEPTH = 1
 
-COUNT_WEIGHT = 20
-CHAIN_WEIGHT = 10
-STRONG_CHAIN_WEIGHT = 50
+COUNT_WEIGHT = 10
+CHAIN_WEIGHT = 40
+STRONG_CHAIN_WEIGHT = 80
 MATRIX_WEIGHT = 100
 
 POINT_MATRIX = [
-    [4, -3, 2, 2, 2, 2, -3, 4],
-    [-3, -4, -1, -1, -1, -1, -4, -3],
-    [2, -1, 1, 0, 0, 1, -1, 2],
-    [2, -1, 0, 1, 1, 0, -1, 2],
-    [2, -1, 0, 1, 1, 0, -1, 2],
-    [2, -1, 1, 1, 1, 1, -1, 2],
-    [-3, -4, -1, -1, -1, -1, -4, -3],
-    [4, -3, 2, 2, 2, 2, -3, 4]
+    [20, -3, 11, 8, 8, 11, -3, 20],
+    [-3, -7, -4, 1, 1, -4, -7, -3],
+    [11, -4, 2, 2, 2, 2, -4, 11],
+    [8, 1, 2, -3, -3, 2, 1, 8],
+    [8, 1, 2, -3, -3, 2, 1, 8],
+    [11, -4, 2, 2, 2, 2, -4, 11],
+    [-3, -7, -4, 1, 1, -4, -7, -3],
+    [20, -3, 11, 8, 8, 11, -3, 20]
 ]
+
+CORNERS = [(0, 0), (0, 7), (7, 0), (7, 7)]
 
 ADJACENT_CORNERS = [
     (0, 1), (1, 0), (1, 1), (0, 6), (1, 6), (1, 7),
@@ -32,20 +34,13 @@ class Agent:
         return
 
     def getNextMove(self, state):
+        # Make it always take a corner if it can
+        for x, y in CORNERS:
+            if state.isValidMove(x, y, state.nextMove):
+                return (x, y)
+
         # ALPHA BETA PRUNING
-        # best_move, best_value = self.__minimax(state, DEPTH, -INF, INF, True)
-        # return best_move
-    
-        # JUST HEURISTIC
-        best = -INF
-        best_move = None
-        moves = self.__generate_possible_moves(state)
-        for move in moves:
-            new_state = self.__apply_move(state, move)
-            val = self.__heuristic(new_state)
-            if val > best:
-                best = val
-                best_move = move
+        best_move, best_value = self.__minimax(state, DEPTH, -INF, INF, True)
 
         return best_move
 
@@ -54,33 +49,34 @@ class Agent:
             return None, self.__heuristic(state)
 
         best_move = None
-
         moves = self.__generate_possible_moves(state)
         if is_maximizing:
             max_eval = -INF
             for move in moves:
                 new_state = self.__apply_move(state, move)
-                _, eval = self.__minimax(
-                    new_state, depth - 1, alpha, beta, False)
+                eval = self.__minimax(
+                    new_state, depth - 1, alpha, beta, False)[1]
                 if eval > max_eval:
                     max_eval = eval
                     best_move = move
                 alpha = max(alpha, eval)
                 if beta <= alpha:
                     break
+
             return best_move, max_eval
         else:
             min_eval = INF
             for move in moves:
                 new_state = self.__apply_move(state, move)
-                _, eval = self.__minimax(
-                    new_state, depth - 1, alpha, beta, True)
+                eval = self.__minimax(
+                    new_state, depth - 1, alpha, beta, True)[1]
                 if eval < min_eval:
                     min_eval = eval
                     best_move = move
                 beta = min(beta, eval)
                 if beta <= alpha:
                     break
+
             return best_move, min_eval
 
     def __heuristic(self, state, verbose=False):
@@ -96,28 +92,27 @@ class Agent:
 
         for i in range(len(POINT_MATRIX)):
             for j in range(len(POINT_MATRIX[0])):
-                if board[i][j] == my_color:
-                    my_matrix += POINT_MATRIX[i][j]
-                    my_count += 1
-                elif board[i][j] == opp_color:
-                    opp_matrix += POINT_MATRIX[i][j]
-                    opp_count += 1
+                if board[i][j] not in ADJACENT_CORNERS:
+                    if board[i][j] == my_color:
+                        my_matrix += POINT_MATRIX[i][j]
+                        my_count += 1
+                    elif board[i][j] == opp_color:
+                        opp_matrix += POINT_MATRIX[i][j]
+                        opp_count += 1
 
-        matrix = my_matrix - opp_matrix
         count = my_count - opp_count
 
-        # Adjusting the values of adjacent corner squares
-        corners = [(0, 0), (0, state.numCols - 1), (state.numRows -
-                                                    1, 0), (state.numRows - 1, state.numCols - 1)]
-        for x, y in corners:
+        for x, y in CORNERS:
             if board[x][y] == Piece.EMPTY:
                 for dx, dy in [(0, 1), (1, 0), (1, 1), (0, -1), (1, -1), (-1, 0), (-1, 1), (-1, -1)]:
                     adj_x, adj_y = x + dx, y + dy
                     if 0 <= adj_x < state.numRows and 0 <= adj_y < state.numCols:
                         if board[adj_x][adj_y] == my_color:
-                            matrix -= POINT_MATRIX[adj_x][adj_y]
+                            my_matrix += POINT_MATRIX[adj_x][adj_y]
                         elif board[adj_x][adj_y] == opp_color:
-                            matrix += POINT_MATRIX[adj_x][adj_y]
+                            opp_matrix += POINT_MATRIX[adj_x][adj_y]
+
+        matrix = my_matrix - opp_matrix
 
         # CHAIN and STRONG CHAIN
         edges = [(0, col) for col in range(state.numCols)] + \
@@ -156,14 +151,14 @@ class Agent:
             opp_chains.append(chain)
 
         for chain in my_chains:
-            has_corner = any(corner in chain for corner in corners)
+            has_corner = any(corner in chain for corner in CORNERS)
             if has_corner:
                 my_strong_chain += len(chain) - 1
             else:
                 my_chain += len(chain) - 1
 
         for chain in opp_chains:
-            has_corner = any(corner in chain for corner in corners)
+            has_corner = any(corner in chain for corner in CORNERS)
             if has_corner:
                 opp_strong_chain += len(chain) - 1
             else:
