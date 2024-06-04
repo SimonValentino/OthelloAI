@@ -40,8 +40,8 @@ class SpareAgent:
         #         return (x, y)
 
         # ALPHA BETA PRUNING
-        best_move, best_value = self.__minimax(state, DEPTH, -INF, INF, True)
-
+        # best_move, best_value = self.__minimax(state, DEPTH, -INF, INF, True)
+        best_move = random.choice(self.__generate_possible_moves(state))
         return best_move
 
     def __minimax(self, state, depth, alpha, beta, is_maximizing):

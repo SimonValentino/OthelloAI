@@ -5,9 +5,11 @@ import time
 INF = float('inf')
 DEPTH = 1
 
-COUNT_WEIGHT = 10
-CHAIN_WEIGHT = 40
-STRONG_CHAIN_WEIGHT = 80
+COUNT_WEIGHT = 100
+LATE_GAME_COUNT_WEIGHT = 10000
+BLANK_COUNT_FOR_LATE_GAME = 10
+CHAIN_WEIGHT = 400
+STRONG_CHAIN_WEIGHT = 800
 MATRIX_WEIGHT = 100
 
 POINT_MATRIX = [
@@ -167,9 +169,18 @@ class Agent:
         chain = my_chain - opp_chain
         strong_chain = my_strong_chain - opp_strong_chain
 
+        board = state.board
+        blank_count = 0
+        for row in board:
+            for piece in row:
+                if piece == Piece.EMPTY:
+                    blank_count += 1
+
+        count_weight = COUNT_WEIGHT if blank_count > BLANK_COUNT_FOR_LATE_GAME else LATE_GAME_COUNT_WEIGHT
+
         score = matrix * MATRIX_WEIGHT + \
-            count * COUNT_WEIGHT + \
-            chain * CHAIN_WEIGHT + \
+            count * count_weight + \
+            chain * count_weight + \
             strong_chain * STRONG_CHAIN_WEIGHT
 
         if verbose:
