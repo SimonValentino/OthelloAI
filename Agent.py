@@ -1,17 +1,19 @@
 from OthelloState import Piece, OthelloState
 import random
 import time
+from copy import deepcopy
 
 INF = float('inf')
-DEPTH = 1
+DEPTH = 2
 
 COUNT_WEIGHT = 100
-LATE_GAME_COUNT_WEIGHT = 10000
-BLANK_COUNT_FOR_LATE_GAME = 10
+LATE_GAME_COUNT_WEIGHT = 5000
+LATE_GAME = 6
 CHAIN_WEIGHT = 400
-STRONG_CHAIN_WEIGHT = 800
+STRONG_CHAIN_WEIGHT = 1200
 MATRIX_WEIGHT = 100
 
+MY_COLOR = Piece.BLACK
 POINT_MATRIX = [
     [20, -3, 11, 8, 8, 11, -3, 20],
     [-3, -7, -4, 1, 1, -4, -7, -3],
@@ -41,7 +43,8 @@ class Agent:
             if state.isValidMove(x, y, state.nextMove):
                 return (x, y)
 
-        # ALPHA BETA PRUNING
+        time.sleep(0)
+        # MINIMAX
         best_move, best_value = self.__minimax(state, DEPTH, -INF, INF, True)
 
         return best_move
@@ -61,9 +64,10 @@ class Agent:
                 if eval > max_eval:
                     max_eval = eval
                     best_move = move
+
                 alpha = max(alpha, eval)
                 if beta <= alpha:
-                    break
+                    pass
 
             return best_move, max_eval
         else:
@@ -75,15 +79,16 @@ class Agent:
                 if eval < min_eval:
                     min_eval = eval
                     best_move = move
+
                 beta = min(beta, eval)
                 if beta <= alpha:
-                    break
+                    pass
 
             return best_move, min_eval
 
     def __heuristic(self, state, verbose=False):
-        my_color = state.nextMove
-        opp_color = Piece.oppositePiece(my_color)
+        print(MY_COLOR)
+        opp_color = Piece.oppositePiece(MY_COLOR)
         board = state.board
 
         # MATRIX and COUNT
@@ -95,7 +100,7 @@ class Agent:
         for i in range(len(POINT_MATRIX)):
             for j in range(len(POINT_MATRIX[0])):
                 if board[i][j] not in ADJACENT_CORNERS:
-                    if board[i][j] == my_color:
+                    if board[i][j] == MY_COLOR:
                         my_matrix += POINT_MATRIX[i][j]
                         my_count += 1
                     elif board[i][j] == opp_color:
@@ -109,7 +114,7 @@ class Agent:
                 for dx, dy in [(0, 1), (1, 0), (1, 1), (0, -1), (1, -1), (-1, 0), (-1, 1), (-1, -1)]:
                     adj_x, adj_y = x + dx, y + dy
                     if 0 <= adj_x < state.numRows and 0 <= adj_y < state.numCols:
-                        if board[adj_x][adj_y] == my_color:
+                        if board[adj_x][adj_y] == MY_COLOR:
                             my_matrix += POINT_MATRIX[adj_x][adj_y]
                         elif board[adj_x][adj_y] == opp_color:
                             opp_matrix += POINT_MATRIX[adj_x][adj_y]
@@ -137,7 +142,7 @@ class Agent:
             x, y = edge
             curr = state.board[x][y]
             if curr != prev:
-                if prev == my_color:
+                if prev == MY_COLOR:
                     my_chains.append(chain)
                 elif prev == opp_color:
                     opp_chains.append(chain)
@@ -147,7 +152,7 @@ class Agent:
             chain.append(edge)
             prev = curr
 
-        if prev == my_color:
+        if prev == MY_COLOR:
             my_chains.append(chain)
         elif prev == opp_color:
             opp_chains.append(chain)
@@ -176,21 +181,21 @@ class Agent:
                 if piece == Piece.EMPTY:
                     blank_count += 1
 
-        count_weight = COUNT_WEIGHT if blank_count > BLANK_COUNT_FOR_LATE_GAME else LATE_GAME_COUNT_WEIGHT
+        count_weight = COUNT_WEIGHT if blank_count > LATE_GAME else LATE_GAME
 
         score = matrix * MATRIX_WEIGHT + \
             count * count_weight + \
-            chain * count_weight + \
+            chain * CHAIN_WEIGHT + \
             strong_chain * STRONG_CHAIN_WEIGHT
 
         if verbose:
-            print(my_color, "COUNT:", my_count)
+            print(MY_COLOR, "COUNT:", my_count)
             print(opp_color, "COUNT:", opp_count)
-            print(my_color, "CHAIN:", my_chain)
+            print(MY_COLOR, "CHAIN:", my_chain)
             print(opp_color, "CHAIN:", opp_chain)
-            print(my_color, "STRONG CHAIN:", my_strong_chain)
+            print(MY_COLOR, "STRONG CHAIN:", my_strong_chain)
             print(opp_color, "STRONG CHAIN:", opp_strong_chain)
-            print(my_color, "MATRIX:", my_matrix)
+            print(MY_COLOR, "MATRIX:", my_matrix)
             print(opp_color, "MATRIX:", opp_matrix)
             print("SCORE:", score)
 
@@ -206,10 +211,7 @@ class Agent:
         return moves
 
     def __apply_move(self, state, move):
-        new_state = OthelloState()
-        new_state.board = [row[:] for row in state.board]
-        new_state.nextMove = state.nextMove
+        new_state = deepcopy(state)
         new_state.placePiece(move[0], move[1])
-        new_state.nextMove = Piece.oppositePiece(new_state.nextMove)
 
         return new_state
