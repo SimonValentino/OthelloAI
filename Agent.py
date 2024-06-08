@@ -91,7 +91,7 @@ class Agent:
 
             return best_move, min_eval
 
-    def __heuristic(self, state, my_color, verbose=False):
+    def __heuristic(self, state, my_color):
         opp_color = Piece.oppositePiece(my_color)
         board = state.board
 
@@ -191,17 +191,6 @@ class Agent:
             count * count_weight + \
             chain * CHAIN_WEIGHT + \
             strong_chain * STRONG_CHAIN_WEIGHT
-
-        if verbose:
-            print(my_color, "COUNT:", my_count)
-            print(opp_color, "COUNT:", opp_count)
-            print(my_color, "CHAIN:", my_chain)
-            print(opp_color, "CHAIN:", opp_chain)
-            print(my_color, "STRONG CHAIN:", my_strong_chain)
-            print(opp_color, "STRONG CHAIN:", opp_strong_chain)
-            print(my_color, "MATRIX:", my_matrix)
-            print(opp_color, "MATRIX:", opp_matrix)
-            print("SCORE:", score)
 
         return score
 
