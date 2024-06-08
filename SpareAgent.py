@@ -3,6 +3,7 @@ from OthelloState import Piece
 from OthelloState import GameType
 from copy import deepcopy
 import time
+import random
 # from Othello import OthelloState
 
 
@@ -208,6 +209,9 @@ class SpareAgent:
     # Any more and the game will immediately end
     # and the other player will win by default
     def getNextMove(self, state):
+        moves = self.legalMoves(state)
+        return random.choice(moves)
+        
         time.sleep(0)
         depth = 4
         # pass in the color of your opponent
