@@ -4,7 +4,7 @@ import time
 from copy import deepcopy
 
 INF = float('inf')
-DEPTH = 4
+DEPTH = 5
 
 COUNT_WEIGHT = 100
 LATE_GAME_COUNT_WEIGHT = 5000
